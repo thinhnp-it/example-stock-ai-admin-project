@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-brand: system-ui, sans-serif;
+  --bg: #0b1220;
+  --panel: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.10);
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: radial-gradient(1200px 600px at 20% 10%, rgba(66, 153, 225, 0.18), transparent 60%),
+              radial-gradient(900px 500px at 80% 30%, rgba(168, 85, 247, 0.16), transparent 55%),
+              var(--bg);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ant-layout {
+  background: transparent !important;
+}
+
+.ant-card {
+  background: var(--panel) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+}
+
+.ant-table {
+  background: transparent !important;
+}
+
+.ant-table-container {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--border) !important;
+}
+
+.ant-table-thead > tr > th {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.ant-table-tbody > tr > td {
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.ant-menu-dark,
+.ant-menu-dark .ant-menu-sub,
+.ant-layout-sider {
+  background: rgba(0, 0, 0, 0.20) !important;
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.ant-layout-header {
+  background: rgba(0, 0, 0, 0.15) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.ant-btn-primary {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
+
+kbd {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  border-bottom-width: 2px;
+  border-radius: 8px;
+  padding: 2px 6px;
+}
+
+/* ===== BRAND LOGO ===== */
+.brand-logo {
+  font-family: var(--font-brand);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  line-height: 1.1;
+
+  background: linear-gradient(90deg, #60a5fa, #a78bfa, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-sub {
+  font-size: 11px;
+  opacity: 0.72;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  margin-top: 6px;
+}

@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+myenv
+__pycache__
+*.pyc
+*.csv
+*.pdf
+data
+tmp
+.DS_Store
+test_*.py
