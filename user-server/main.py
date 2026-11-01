@@ -1,4 +1,5 @@
 """Authentication service for a single administrator configured at deployment."""
+
 import base64
 import hashlib
 import hmac
@@ -18,7 +19,13 @@ app = FastAPI(title="Authentication API")
 install_health_probe(app)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3003").split(",") if origin.strip()],
+    allow_origins=[
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ORIGINS", "http://localhost:3000,http://localhost:3003"
+        ).split(",")
+        if origin.strip()
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type"],
@@ -36,7 +43,9 @@ def verify_password(password: str, encoded: str) -> bool:
         iterations = int(rounds)
         if scheme != "pbkdf2_sha256" or not 600_000 <= iterations <= 2_000_000:
             return False
-        digest = hashlib.pbkdf2_hmac("sha256", password.encode(), base64.urlsafe_b64decode(salt), iterations)
+        digest = hashlib.pbkdf2_hmac(
+            "sha256", password.encode(), base64.urlsafe_b64decode(salt), iterations
+        )
         return hmac.compare_digest(base64.urlsafe_b64encode(digest).decode(), expected)
     except (ValueError, TypeError):
         return False
@@ -48,11 +57,23 @@ def login(data: LoginRequest):
     password_hash = os.getenv("AUTH_ADMIN_PASSWORD_HASH", "")
     if not email or not password_hash:
         raise HTTPException(status_code=503, detail="Authentication is not configured")
-    if not (hmac.compare_digest(data.email.strip().lower().encode(), email.encode()) and verify_password(data.password, password_hash)):
+    if not (
+        hmac.compare_digest(data.email.strip().lower().encode(), email.encode())
+        and verify_password(data.password, password_hash)
+    ):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     now = datetime.now(timezone.utc)
-    user = {"id": email, "email": email, "name": os.getenv("AUTH_ADMIN_NAME", "Administrator"), "role": "admin"}
-    token = jwt.encode({"sub": email, "iat": now, "exp": now + timedelta(hours=8), **user}, jwt_secret(), algorithm="HS256")
+    user = {
+        "id": email,
+        "email": email,
+        "name": os.getenv("AUTH_ADMIN_NAME", "Administrator"),
+        "role": "admin",
+    }
+    token = jwt.encode(
+        {"sub": email, "iat": now, "exp": now + timedelta(hours=8), **user},
+        jwt_secret(),
+        algorithm="HS256",
+    )
     return {"access_token": token, "token_type": "bearer", "user": user}
 
 

@@ -19,19 +19,25 @@ if DB_TYPE not in ("postgresql", "mysql"):
     raise ValueError("Unsupported database type in DB_TYPE env var.")
 DATABASE_URL = URL.create(
     "postgresql+psycopg2" if DB_TYPE == "postgresql" else "mysql+pymysql",
-    username=DB_USERNAME, password=DB_PASSWORD, host=DB_HOST,
-    port=int(DB_PORT) if DB_PORT else None, database=DB_NAME,
+    username=DB_USERNAME,
+    password=DB_PASSWORD,
+    host=DB_HOST,
+    port=int(DB_PORT) if DB_PORT else None,
+    database=DB_NAME,
 )
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 def get_database_schema():
     inspector = inspect(engine)
     schema = ""
     for table_name in inspector.get_table_names():
         schema += f"Table: {table_name}\n"
-        primary_keys = set(inspector.get_pk_constraint(table_name).get("constrained_columns") or [])
+        primary_keys = set(
+            inspector.get_pk_constraint(table_name).get("constrained_columns") or []
+        )
         foreign_keys = {
             column: f"{fk['referred_table']}.{target}"
             for fk in inspector.get_foreign_keys(table_name)

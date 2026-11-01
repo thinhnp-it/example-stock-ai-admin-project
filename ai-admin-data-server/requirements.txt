@@ -1,5 +1,5 @@
-requests 
-python-dotenv 
+requests
+python-dotenv
 pandas
 yfinance
 psycopg2-binary

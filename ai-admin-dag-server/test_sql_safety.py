@@ -4,7 +4,10 @@ from sql_safety import validate_read_query
 
 class QuerySafetyTests(unittest.TestCase):
     def test_allowed_queries(self):
-        for query in ("SELECT COUNT(*) FROM stocks", "WITH x AS (SELECT * FROM stocks) SELECT * FROM x"):
+        for query in (
+            "SELECT COUNT(*) FROM stocks",
+            "WITH x AS (SELECT * FROM stocks) SELECT * FROM x",
+        ):
             self.assertTrue(validate_read_query(query, "postgres"))
 
     def test_dangerous_queries_are_rejected(self):

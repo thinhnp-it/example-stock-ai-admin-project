@@ -7,8 +7,8 @@ from typing import List, Optional, Literal, Dict, Any
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, Column, Date, Float, String, select, desc, asc, func
+from pydantic import BaseModel
+from sqlalchemy import create_engine, Column, Date, Float, String, select, desc, asc
 from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase
 from sqlalchemy.engine import URL
 from security import install_health_probe, require_user
@@ -21,8 +21,14 @@ DB_USER = os.getenv("USERNAME")
 DB_PASS = os.getenv("PASSWORD")
 DB_PORT = os.getenv("PORT")
 
-DATABASE_URL = URL.create("postgresql+psycopg2", username=DB_USER, password=DB_PASS, host=DB_HOST,
-                          port=int(DB_PORT) if DB_PORT else None, database=DB_NAME)
+DATABASE_URL = URL.create(
+    "postgresql+psycopg2",
+    username=DB_USER,
+    password=DB_PASS,
+    host=DB_HOST,
+    port=int(DB_PORT) if DB_PORT else None,
+    database=DB_NAME,
+)
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -107,7 +113,11 @@ def get_dynamic_table(table_name: str):
 
 
 # ---------- App ----------
-app = FastAPI(title="Stock Data API", description="API to fetch stock data from PostgreSQL", dependencies=[Depends(require_user)])
+app = FastAPI(
+    title="Stock Data API",
+    description="API to fetch stock data from PostgreSQL",
+    dependencies=[Depends(require_user)],
+)
 install_health_probe(app)
 
 # cors_origins = os.getenv("CORS_ORIGINS", "*")
@@ -129,11 +139,16 @@ install_health_probe(app)
 #     allow_headers=["*"],
 # )
 
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3003").split(",") if origin.strip()],
+    allow_origins=[
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ORIGINS", "http://localhost:3000,http://localhost:3003"
+        ).split(",")
+        if origin.strip()
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -230,7 +245,6 @@ def get_stock_summary(
         return StockSummary(symbol=sym, start=start, end=end, points=0)
 
     # calc
-    first = rows[0]
     latest = rows[-1]
     closes = [r.close or 0 for r in rows]
     highs = [r.high or 0 for r in rows]
@@ -239,7 +253,9 @@ def get_stock_summary(
 
     first_close = closes[0] if closes else 0
     latest_close = closes[-1] if closes else 0
-    change_pct = ((latest_close - first_close) / first_close * 100) if first_close else 0
+    change_pct = (
+        ((latest_close - first_close) / first_close * 100) if first_close else 0
+    )
 
     avg_volume = sum(volumes) / max(len(volumes), 1)
     high_val = max(highs) if highs else 0

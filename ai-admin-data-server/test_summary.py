@@ -8,8 +8,22 @@ import main
 class SummaryTests(unittest.TestCase):
     def test_latest_rows_are_reversed_into_time_order(self):
         rows = [
-            SimpleNamespace(date=date(2024, 1, 3), close=30, high=32, low=28, volume=300, name="TSLA"),
-            SimpleNamespace(date=date(2024, 1, 2), close=20, high=22, low=18, volume=200, name="TSLA"),
+            SimpleNamespace(
+                date=date(2024, 1, 3),
+                close=30,
+                high=32,
+                low=28,
+                volume=300,
+                name="TSLA",
+            ),
+            SimpleNamespace(
+                date=date(2024, 1, 2),
+                close=20,
+                high=22,
+                low=18,
+                volume=200,
+                name="TSLA",
+            ),
         ]
         db = Mock()
         db.execute.return_value.scalars.return_value.all.return_value = rows

@@ -13,7 +13,8 @@ from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pinecone import Pinecone
-from config import *
+from config import PINECONE_API_KEY, PINECONE_INDEX_NAME
+
 
 def extract_text_from_file(file_name: str) -> str:
     file_path = file_name
@@ -22,7 +23,11 @@ def extract_text_from_file(file_name: str) -> str:
             with pdfplumber.open(file_path) as pdf:
                 return "\n".join(page.extract_text() or "" for page in pdf.pages)
         elif file_path.endswith(".xlsx") or file_path.endswith(".csv"):
-            df = pd.read_excel(file_path) if file_path.endswith(".xlsx") else pd.read_csv(file_path)
+            df = (
+                pd.read_excel(file_path)
+                if file_path.endswith(".xlsx")
+                else pd.read_csv(file_path)
+            )
             return df.to_string()
         elif file_path.endswith(".docx"):
             doc = DocxDocument(file_path)
@@ -36,17 +41,22 @@ def extract_text_from_file(file_name: str) -> str:
                 return f.read()
     except Exception as e:
         raise ValueError(f"Could not extract document: {file_path}") from e
-    
-    
+
 
 def normalize_id(id_str: str) -> str:
-    normalized = unicodedata.normalize('NFKD', id_str).encode('ASCII', 'ignore').decode('ASCII')
-    normalized = re.sub(r'[^a-zA-Z0-9._-]', '_', normalized)
+    normalized = (
+        unicodedata.normalize("NFKD", id_str).encode("ASCII", "ignore").decode("ASCII")
+    )
+    normalized = re.sub(r"[^a-zA-Z0-9._-]", "_", normalized)
     return normalized
 
 
 def normalize_search_text(value: str) -> str:
-    normalized = unicodedata.normalize("NFKD", value or "").encode("ASCII", "ignore").decode("ASCII")
+    normalized = (
+        unicodedata.normalize("NFKD", value or "")
+        .encode("ASCII", "ignore")
+        .decode("ASCII")
+    )
     normalized = normalized.lower()
     return re.sub(r"[^a-z0-9]+", " ", normalized).strip()
 
@@ -83,8 +93,14 @@ def source_matches_document_reference(source: str, reference: Dict[str, str]) ->
 
     normalized = normalize_search_text(source)
     tokens = normalized.split()
-    has_document_kind = "thong tu" in normalized or "tt btc" in normalized or "ttbtc" in normalized
-    return reference["number"] in tokens and reference["year"] in tokens and has_document_kind
+    has_document_kind = (
+        "thong tu" in normalized or "tt btc" in normalized or "ttbtc" in normalized
+    )
+    return (
+        reference["number"] in tokens
+        and reference["year"] in tokens
+        and has_document_kind
+    )
 
 
 def matching_sources_for_query(query: str, sources: Sequence[str]) -> List[str]:
@@ -94,7 +110,10 @@ def matching_sources_for_query(query: str, sources: Sequence[str]) -> List[str]:
 
     matches = []
     for source in sources:
-        if any(source_matches_document_reference(source, reference) for reference in references):
+        if any(
+            source_matches_document_reference(source, reference)
+            for reference in references
+        ):
             matches.append(source)
 
     return matches
@@ -110,7 +129,10 @@ def document_reference_score(query: str, metadata: dict) -> int:
     source = str(metadata.get("source") or "")
 
     for reference in references:
-        if metadata_number == reference["number"] and metadata_year == reference["year"]:
+        if (
+            metadata_number == reference["number"]
+            and metadata_year == reference["year"]
+        ):
             return 100
         if source_matches_document_reference(source, reference):
             return 90
@@ -128,7 +150,9 @@ def rerank_documents_for_query(query: str, documents: List) -> List:
         if key in seen:
             continue
         seen.add(key)
-        scored_documents.append((document_reference_score(query, document.metadata), index, document))
+        scored_documents.append(
+            (document_reference_score(query, document.metadata), index, document)
+        )
 
     scored_documents.sort(key=lambda item: (-item[0], item[1]))
     return [document for _, _, document in scored_documents]
@@ -145,9 +169,12 @@ def ordered_unique_sources(documents: List) -> List[str]:
 
     return sources
 
+
 @lru_cache(maxsize=1)
 def get_embeddings():
-    return HuggingFaceEmbeddings(model_name="alikia2x/jina-embedding-v3-m2v-1024", model_kwargs={"device": "cpu"})
+    return HuggingFaceEmbeddings(
+        model_name="alikia2x/jina-embedding-v3-m2v-1024", model_kwargs={"device": "cpu"}
+    )
 
 
 def initialize_vector_store(files: List[dict]) -> PineconeVectorStore:
@@ -158,12 +185,19 @@ def initialize_vector_store(files: List[dict]) -> PineconeVectorStore:
         print(local_path)
         text = extract_text_from_file(local_path)
         if text.strip():
-            metadata = {"source": file_path["cloud"], "type": file_path["local"].split(".")[-1]}
-            references = extract_document_references(file_path["cloud"]) or extract_document_references(text[:3000])
+            metadata = {
+                "source": file_path["cloud"],
+                "type": file_path["local"].split(".")[-1],
+            }
+            references = extract_document_references(
+                file_path["cloud"]
+            ) or extract_document_references(text[:3000])
             if references:
                 metadata["doc_number"] = references[0]["number"]
                 metadata["doc_year"] = references[0]["year"]
-                metadata["doc_citation"] = f"{references[0]['number']}/{references[0]['year']}"
+                metadata["doc_citation"] = (
+                    f"{references[0]['number']}/{references[0]['year']}"
+                )
 
             docs = splitter.create_documents([text], metadatas=[metadata])
             documents.extend(docs)
@@ -180,11 +214,15 @@ def initialize_vector_store(files: List[dict]) -> PineconeVectorStore:
             name=index_name,
             dimension=1024,  # Phù hợp với mô hình nhúng jina-embedding-v3-m2v-1024
             metric="cosine",
-            spec={"serverless": {"cloud": "aws", "region": "us-east-1"}}
+            spec={"serverless": {"cloud": "aws", "region": "us-east-1"}},
         )
-        
+
     embeddings = get_embeddings()
-    vector_store = PineconeVectorStore(index_name=PINECONE_INDEX_NAME, embedding=embeddings, pinecone_api_key=PINECONE_API_KEY)
+    vector_store = PineconeVectorStore(
+        index_name=PINECONE_INDEX_NAME,
+        embedding=embeddings,
+        pinecone_api_key=PINECONE_API_KEY,
+    )
 
     if documents:
         print("Indexing new documents...")

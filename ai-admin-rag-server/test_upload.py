@@ -19,9 +19,14 @@ class UploadTests(unittest.TestCase):
         self.assertEqual(upload.call_args.args[2], key)
 
     def test_rejects_unsupported_or_oversized_file(self):
-        for name, content, status in (("script.exe", b"x", 400), ("large.txt", b"x" * (20 * 1024 * 1024 + 1), 413)):
+        for name, content, status in (
+            ("script.exe", b"x", 400),
+            ("large.txt", b"x" * (20 * 1024 * 1024 + 1), 413),
+        ):
             with self.subTest(name=name), self.assertRaises(HTTPException) as raised:
-                asyncio.run(main.upload_file(UploadFile(filename=name, file=BytesIO(content))))
+                asyncio.run(
+                    main.upload_file(UploadFile(filename=name, file=BytesIO(content)))
+                )
             self.assertEqual(raised.exception.status_code, status)
 
     @patch("main.initialize_vector_store")
