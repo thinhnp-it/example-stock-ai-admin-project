@@ -1,0 +1,33 @@
+{$CADDY_SITE} {
+	encode zstd gzip
+	header /runtime-config.js Cache-Control "no-store, no-cache, must-revalidate"
+
+	@auth path /auth/*
+	handle @auth {
+		reverse_proxy auth:8000
+	}
+
+	@stock path /stocks /stocks/*
+	handle @stock {
+		reverse_proxy data:8000
+	}
+
+	@rag path /upload_file* /insert_file* /list_files* /rag_query* /get_users* /add_user*
+	handle @rag {
+		reverse_proxy rag:8000
+	}
+
+	@dag path /query-database
+	handle @dag {
+		reverse_proxy dag:8000
+	}
+
+	@health path /healthz
+	handle @health {
+		respond "proxy alive" 200
+	}
+
+	handle {
+		reverse_proxy dashboard:3000
+	}
+}

@@ -1,0 +1,120 @@
+name: ai-admin
+
+x-app-defaults: &app-defaults
+  restart: unless-stopped
+  init: true
+  networks:
+    - app
+
+services:
+  auth:
+    <<: *app-defaults
+    image: ${IMAGE_PREFIX:-ai-admin}-auth:${APP_IMAGE_TAG:-local}
+    build:
+      context: ./user-server
+    env_file:
+      - ./user-server/.env
+    expose:
+      - "8000"
+
+  data:
+    <<: *app-defaults
+    image: ${IMAGE_PREFIX:-ai-admin}-data:${APP_IMAGE_TAG:-local}
+    build:
+      context: ./ai-admin-data-server
+    env_file:
+      - ./ai-admin-data-server/.env
+    expose:
+      - "8000"
+
+  rag:
+    <<: *app-defaults
+    image: ${IMAGE_PREFIX:-ai-admin}-rag:${APP_IMAGE_TAG:-local}
+    build:
+      context: ./ai-admin-rag-server
+    env_file:
+      - ./ai-admin-rag-server/.env
+    environment:
+      HF_HOME: /var/cache/huggingface
+    volumes:
+      - rag-model-cache:/var/cache/huggingface
+    expose:
+      - "8000"
+
+  dag:
+    <<: *app-defaults
+    image: ${IMAGE_PREFIX:-ai-admin}-dag:${APP_IMAGE_TAG:-local}
+    build:
+      context: ./ai-admin-dag-server
+    env_file:
+      - ./ai-admin-dag-server/.env
+    expose:
+      - "8000"
+
+  dashboard:
+    <<: *app-defaults
+    image: ${IMAGE_PREFIX:-ai-admin}-dashboard:${APP_IMAGE_TAG:-local}
+    build:
+      context: ./ai-admin-dashboard
+    environment:
+      # Empty means same-origin requests, routed by Caddy to the relevant API.
+      PUBLIC_AUTH_API_BASE_URL: ${PUBLIC_AUTH_API_BASE_URL:-}
+      PUBLIC_DATA_API_BASE_URL: ${PUBLIC_DATA_API_BASE_URL:-}
+      PUBLIC_RAG_API_BASE_URL: ${PUBLIC_RAG_API_BASE_URL:-}
+      PUBLIC_DAG_API_BASE_URL: ${PUBLIC_DAG_API_BASE_URL:-}
+      PUBLIC_TAG_API_BASE_URL: ${PUBLIC_TAG_API_BASE_URL:-}
+      PUBLIC_AI_API_BASE_URL: ${PUBLIC_AI_API_BASE_URL:-}
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-}
+    expose:
+      - "3000"
+    depends_on:
+      auth:
+        condition: service_healthy
+      data:
+        condition: service_healthy
+      rag:
+        condition: service_healthy
+      dag:
+        condition: service_healthy
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    init: true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    environment:
+      CADDY_SITE: ${CADDY_SITE:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - app
+    depends_on:
+      dashboard:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+      data:
+        condition: service_healthy
+      rag:
+        condition: service_healthy
+      dag:
+        condition: service_healthy
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  caddy-data:
+  caddy-config:
+  rag-model-cache:
